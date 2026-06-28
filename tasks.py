@@ -1,46 +1,30 @@
 from celery_app import celery_app
 from celery.utils.log import get_task_logger
-from sqlalchemy import select, delete
-from sqlalchemy.ext.asyncio import AsyncSession
-from db.session import AsyncSessionLocal
-from users.models import User
+from sqlalchemy import create_engine, text
 from datetime import datetime, timedelta
-import asyncio
+from core.config import settings
 
 logger = get_task_logger(__name__)
 
-# NOTE: Currently set to 1 minute for testing purposes.
-# In production, change timedelta(minutes=1) to timedelta(days=2)
-# to delete unverified users after 2 days as per business requirements.
-# Also update beat_schedule interval from 60.0 to 3600.0 (every hour)
 
 @celery_app.task
 def delete_unverified_users():
-    asyncio.run(_delete_unverified_users())
+    # NOTE: Using sync psycopg2 driver here instead of asyncpg
+    # because Celery workers are synchronous and asyncpg conflicts
+    # with Celery's event loop. In production with async Celery setup
+    # this would use asyncpg properly.
+    sync_url = settings.DATABASE_URL.replace("postgresql+asyncpg", "postgresql+psycopg2")
+    engine = create_engine(sync_url)
 
+    # NOTE: Currently 1 minute for testing. Change to timedelta(days=2) in production
+    cutoff = datetime.utcnow() - timedelta(minutes=1)
 
-async def _delete_unverified_users():
-    async with AsyncSessionLocal() as db:
-        cutoff = datetime.utcnow() - timedelta(minutes=1)
-        result = await db.execute(
-            select(User).where(
-                User.is_verified == False,
-                User.created_at < cutoff
-            )
+    with engine.connect() as conn:
+        result = conn.execute(
+            text("DELETE FROM users WHERE is_verified = false AND created_at < :cutoff"),
+            {"cutoff": cutoff}
         )
-        users = result.scalars().all()
-        for user in users:
-            await db.delete(user)
-        await db.commit()
-        logger.info(f"Deleted {len(users)} unverified users")
+        conn.commit()
+        logger.info(f"Deleted {result.rowcount} unverified users")
 
-
-
-celery_app.conf.beat_schedule = {
-    "delete-unverified-users-every-hour": {
-        "task": "tasks.delete_unverified_users",
-        # NOTE: Currently runs every 60 seconds for testing.
-        # In production, change to 3600.0 to run every hour.
-        "schedule": 60.0,  # every hour
-    }
-}
+    engine.dispose()

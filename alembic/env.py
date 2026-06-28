@@ -45,4 +45,3 @@ if context.is_offline_mode():
 else:
     run_async_migrations()
 
-print(Base.metadata.tables.keys())
