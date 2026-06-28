@@ -1,0 +1,172 @@
+# Users API
+
+Production-ready modular monolith for user management built with FastAPI.
+
+## Features
+
+- User registration with email verification
+- JWT authentication with access and refresh tokens
+- Role-based access control: User and Admin
+- Automatic deletion of unverified users via Celery
+- Async architecture with SQLAlchemy and PostgreSQL
+- Fully containerized with Docker
+
+## Tech Stack
+
+- FastAPI
+- SQLAlchemy 2.0 async
+- PostgreSQL
+- Alembic for migrations
+- Celery with Redis for background tasks
+- JWT for authentication
+- Passlib with bcrypt for password hashing
+- Docker and docker-compose
+
+## Project Structure
+
+auth/
+    router.py — authentication endpoints: signup, login, refresh, verify
+
+core/
+    config.py — environment variables and settings
+    security.py — JWT token utilities
+
+db/
+    base.py — SQLAlchemy Base class
+    session.py — async database session and dependency
+
+users/
+    models.py — database models: User, RefreshToken, VerificationCode
+    schemas.py — Pydantic schemas for requests and responses
+    repository.py — all database queries
+    services.py — business logic
+    router.py — user management endpoints
+    dependencies.py — auth dependencies for role checking
+
+celery_app.py — Celery configuration
+tasks.py — background task for deleting unverified users
+main.py — application entry point
+
+## Architecture
+
+The project follows a layered architecture pattern:
+
+    router receives HTTP request
+    service handles business logic
+    repository executes database queries
+    database stores the data
+
+Each layer only knows about its direct neighbor. Routers do not touch SQL. Repositories do not know about HTTP.
+
+## Running with Docker (recommended)
+
+1. Clone the repository
+
+    git clone https://github.com/yourusername/UserManagementOrbIT.git
+    cd UserManagementOrbIT
+
+2. Create .env file from example
+
+    cp .env.example .env
+
+   Fill in your values:
+
+    DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/orbdb
+    SECRET_KEY=your-secret-key-here
+
+3. Start all services
+
+    docker-compose up --build
+
+This will automatically:
+- Start PostgreSQL and Redis
+- Run Alembic migrations
+- Start FastAPI application
+- Start Celery worker and beat scheduler
+
+4. Open API documentation
+
+    http://localhost:8000/docs
+
+## Running locally without Docker
+
+1. Install dependencies
+
+    pip install -r requirements.txt
+
+2. Configure .env with local database URL
+
+    DATABASE_URL=postgresql+asyncpg://postgres:your_password@localhost:5432/orbdb
+    SECRET_KEY=your-secret-key-here
+    CELERY_BROKER_URL=redis://localhost:6379/0
+    CELERY_RESULT_BACKEND=redis://localhost:6379/0
+
+3. Create database
+
+    psql -U postgres
+    CREATE DATABASE orbdb;
+
+4. Run migrations
+
+    alembic upgrade head
+
+5. Start the application
+
+    uvicorn main:app --reload
+
+6. Start Celery worker in separate terminal
+
+    celery -A celery_app worker --loglevel=info --pool=solo
+
+7. Start Celery beat in separate terminal
+
+    celery -A celery_app beat --loglevel=info
+
+## API Endpoints
+
+Auth:
+    POST /auth/signup        Register new user
+    POST /auth/login         Login and get tokens
+    POST /auth/refresh       Refresh access token
+    POST /auth/verify        Verify email with code
+
+Users:
+    GET  /users/me           Get current user profile
+    GET  /users/             Get all users (admin only)
+    GET  /users/{id}         Get user by ID (admin only)
+    PATCH /users/{id}        Update user data
+    DELETE /users/{id}       Delete user (admin only)
+    PATCH /users/me/make-admin   Grant admin role (DEV ONLY)
+
+## Testing the API
+
+1. Register via POST /auth/signup
+2. Copy verification code from terminal output
+3. Verify email via POST /auth/verify
+4. Login via POST /auth/login to get tokens
+5. Click Authorize in Swagger UI and paste access token
+6. Use PATCH /users/me/make-admin to get admin access for testing
+
+## Unverified User Cleanup
+
+Celery automatically deletes users who have not verified their email.
+
+Currently set to 1 minute for testing purposes.
+To switch to production mode, open tasks.py and change:
+
+    timedelta(minutes=1)  to  timedelta(days=2)
+
+And in the beat schedule change:
+
+    schedule=60.0  to  schedule=3600.0
+
+## Environment Variables
+
+DATABASE_URL              PostgreSQL connection string (required)
+SECRET_KEY                JWT secret key (required)
+ALGORITHM                 JWT algorithm, default HS256
+ACCESS_TOKEN_EXPIRE_MINUTES   Access token lifetime, default 30
+REFRESH_TOKEN_EXPIRE_DAYS     Refresh token lifetime, default 7
+VERIFICATION_CODE_EXPIRE_MINUTES  Verification code lifetime, default 60
+CELERY_BROKER_URL         Redis broker URL
+CELERY_RESULT_BACKEND     Redis result backend
