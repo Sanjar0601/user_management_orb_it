@@ -27,8 +27,8 @@ class UserUpdate(BaseModel):
 
 
 class VerifyRequest(BaseModel):
+    email: EmailStr
     code: str
-
 
 class RefreshRequest(BaseModel):
     refresh_token: str
