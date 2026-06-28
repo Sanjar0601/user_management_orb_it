@@ -1,8 +1,5 @@
-# Users API
-
-Production-ready modular monolith for user management built with FastAPI.
-
-## Features
+Test Task for Orb IT company
+Features
 
 - User registration with email verification
 - JWT authentication with access and refresh tokens
@@ -11,7 +8,7 @@ Production-ready modular monolith for user management built with FastAPI.
 - Async architecture with SQLAlchemy and PostgreSQL
 - Fully containerized with Docker
 
-## Tech Stack
+Tech Stack
 
 - FastAPI
 - SQLAlchemy 2.0 async
@@ -22,7 +19,7 @@ Production-ready modular monolith for user management built with FastAPI.
 - Passlib with bcrypt for password hashing
 - Docker and docker-compose
 
-## Project Structure
+Project Structure
 
 auth/
     router.py — authentication endpoints: signup, login, refresh, verify
@@ -47,7 +44,7 @@ celery_app.py — Celery configuration
 tasks.py — background task for deleting unverified users
 main.py — application entry point
 
-## Architecture
+Architecture
 
 The project follows a layered architecture pattern:
 
@@ -58,7 +55,7 @@ The project follows a layered architecture pattern:
 
 Each layer only knows about its direct neighbor. Routers do not touch SQL. Repositories do not know about HTTP.
 
-## Running with Docker (recommended)
+ Running with Docker (recommended)
 
 1. Clone the repository
 
@@ -88,7 +85,9 @@ This will automatically:
 
     http://localhost:8000/docs
 
-## Running locally without Docker
+
+
+Running locally without Docker
 
 1. Install dependencies
 
@@ -122,7 +121,7 @@ This will automatically:
 
     celery -A celery_app beat --loglevel=info
 
-## API Endpoints
+PI Endpoints
 
 Auth:
     POST /auth/signup        Register new user
@@ -138,7 +137,7 @@ Users:
     DELETE /users/{id}       Delete user (admin only)
     PATCH /users/me/make-admin   Grant admin role (DEV ONLY)
 
-## Testing the API
+Testing the API
 
 1. Register via POST /auth/signup
 2. Copy verification code from terminal output
@@ -147,7 +146,7 @@ Users:
 5. Click Authorize in Swagger UI and paste access token
 6. Use PATCH /users/me/make-admin to get admin access for testing
 
-## Unverified User Cleanup
+Unverified User Cleanup
 
 Celery automatically deletes users who have not verified their email.
 
@@ -160,7 +159,7 @@ And in the beat schedule change:
 
     schedule=60.0  to  schedule=3600.0
 
-## Environment Variables
+Environment Variables
 
 DATABASE_URL              PostgreSQL connection string (required)
 SECRET_KEY                JWT secret key (required)
