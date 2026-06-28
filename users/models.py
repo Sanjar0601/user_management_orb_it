@@ -1,10 +1,8 @@
 from sqlalchemy import String, Boolean, DateTime, Enum as SAEnum, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from datetime import datetime
+from db.base import Base
 import enum
-
-class Base(DeclarativeBase):
-    pass
 
 
 class UserRole(str, enum.Enum):
